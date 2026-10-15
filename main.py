@@ -76,7 +76,7 @@ from mass_gates.sitechk import (
 
 import payments as pay_sys
 
-BOT_TOKEN = "8853807212:AAG8H5YRrtvG7xC5YQSfEeC7UiP0RdIRQII"
+BOT_TOKEN = "8887655328:AAEcgQRtl6kxBxQTMHiE9C7Bek-rK1on-QE"
 WEBHOOK_URL = f"hhttp://2.25.146.244:8080/shopify"
 WEBHOST = "0.0.0.0"
 WEBPORT = 8080
