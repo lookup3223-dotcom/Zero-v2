@@ -44,7 +44,7 @@ BTN_LIVE_EMOJI_ID = "5039844895779455925"
 BTN_STOP_EMOJI_ID = "5040042498634810056"
 BTN_ALL_EMOJI_ID = "5447602197439218445"
 
-HIT_LOG_GROUP_ID = -1004365685437
+HIT_LOG_GROUP_ID = -100436568543
 EXTRA_CHARGED_GROUP_ID = -1004450921715
 
 BUTTON_LOCK_SECONDS = 30
@@ -92,7 +92,7 @@ _start_msh_gc()
 router = Router()
 
 API_URLS = [
-    "http://5.83.136.86:8081/shoify",
+    "https://afuonax-shopii-api-production.up.railway.app/shopify",
     
       
 ]
@@ -1961,7 +1961,7 @@ async def run_mass_checker(bot: Bot, session_id, cards, user_obj, plan_name):
     session = MSH_SESSIONS.get(session_id)
     if not session: return
 
-    sem = asyncio.Semaphore(50)
+    sem = asyncio.Semaphore(350)
 
     async def worker(cc_formatted, cc_num):
         if is_session_stopped(session_id):
