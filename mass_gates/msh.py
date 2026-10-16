@@ -92,7 +92,7 @@ _start_msh_gc()
 router = Router()
 
 API_URLS = [
-    "http://5.83.136.86:8081/shoify",
+    "https://web-production-0919d.up.railway.app/shopify",
     
       
 ]
@@ -1067,6 +1067,67 @@ async def send_charged_msg_to_user(bot: Bot, cc_formatted, response_msg, bin_dat
             except Exception as inner_e:
                 logging.error(f"Error sending HIT text to extra group: {inner_e}")
 
+def generate_error_file(session: dict, user_obj, plan_name: str) -> Tuple[BytesIO, str, int]:
+    """Build a single .txt file with every ERROR card from the session."""
+    cards_list = session.get('error_cards', [])
+    total_count = len(cards_list)
+    user_display = get_user_display(user_obj, plan_name)
+
+    lines = []
+    lines.append("┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓")
+    lines.append("┃           𝘢𝘩𝘦𝘺𝘢𝘯             ┃")
+    lines.append("┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛")
+    lines.append("")
+    lines.append(f"𝗣𝗲𝘀𝘂𝗹𝘁 𝗧𝘂𝗽𝗲 ➛ 𝘦𝘩𝘦𝘺𝘢𝘯 ❌")
+    lines.append(f"𝗧𝗼𝘁𝗮𝗹 𝗖𝗮𝗿𝗱𝘀 ➛ {total_count}")
+    lines.append("🌐 𝘦𝘢𝘵𝘦𝘳𝘢𝘺 ➛ 𝙎𝘩𝘰𝘱𝘪𝘧𝘺 𝘤𝘢𝘴𝘴")
+    lines.append(f"𝙎𝘴𝘦𝘳 ➛ {user_display}")
+    lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    lines.append("")
+
+    if total_count == 0:
+        lines.append("⚠️ No error cards")
+    else:
+        for idx, card_data in enumerate(cards_list, 1):
+            lines.append(f"#{idx}")
+            lines.append(f"💳 {card_data.get('card', 'N/A')}")
+            lines.append(f"💬 {card_data.get('response', 'N/A')}")
+            lines.append(f"🌐 Shopify {card_data.get('price', 'N/A')} USD")
+            lines.append(f"📡 {card_data.get('proxy_used', 'N/A')}")
+            lines.append("")
+
+    content = "\n".join(lines).encode("utf-8")
+    buffer = BytesIO(content)
+    filename = f"ERRORS_{total_count}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+    return buffer, filename, total_count
+
+async def send_error_cards_file_to_user(bot: Bot, session: dict, user_obj, plan_name):
+    """Send ONE collected errors file to the user's DM after the check finishes."""
+    error_cards = session.get('error_cards', [])
+    if not error_cards:
+        return
+
+    file_buffer, filename, total_count = generate_error_file(session, user_obj, plan_name)
+    caption = (
+        f"{HAS_EMOJI} <b>𝘦𝘩𝘦𝘺𝘢𝘯 𝗥𝗲𝗿𝗼𝗿𝘀</b>\n"
+        f"📄 𝗧𝗼𝘁𝗮𝗹 𝗖𝗮𝗿𝗱𝘀 ➛ <b>{total_count}</b>\n"
+        f"🌐 𝘦𝘢𝘵𝘦𝘳𝘢𝘺 ➛ 𝙎𝘩𝘰𝘱𝘪𝘧𝘺 𝘤𝘢𝘴𝘴"
+    )
+    document = types.BufferedInputFile(file=file_buffer.getvalue(), filename=filename)
+
+    try:
+        await bot.send_document(
+            chat_id=user_obj.id,
+            document=document,
+            caption=caption,
+            parse_mode="HTML"
+        )
+        logging.info(f"[MSH] Error file sent to user {user_obj.id} ({total_count} errors)")
+    except TelegramForbiddenError as e:
+        logging.warning(f"[MSH] Could not DM error file to user {user_obj.id}: {e}")
+    except Exception as e:
+        logging.error(f"[MSH] Error sending error file DM: {e}")
+
 async def _pin_charged_in_dm(bot: Bot, chat_id, message_id):
     """Pin a charged hit in the user's DM. Silent (no notification) and never fatal."""
     try:
@@ -1289,8 +1350,8 @@ async def process_single_card(session_id, cc_formatted, cc_num, user_id, bot, us
     bin_data = {}
     used_proxy = None
 
-    MAX_RETRIES = 7              # Hard cap on site/proxy retries per card
-    MAX_RATE_LIMIT_RETRIES = 5   # Separate cap so 429s can never loop forever
+    MAX_RETRIES = 1              # NO retries during checking - every error card is re-checked once at the end
+    MAX_RATE_LIMIT_RETRIES = 0   # 429 rate-limits are NOT retried either - straight to the final re-check
     RETRY_BASE_DELAY = 0.5       # Exponential backoff base (seconds)
     RETRY_MAX_DELAY = 5.0        # Backoff ceiling (seconds)
     attempt = 0
@@ -1514,7 +1575,7 @@ async def process_single_card(session_id, cc_formatted, cc_num, user_id, bot, us
                     if attempt < MAX_RETRIES:
                         logging.info(
                             f"[MSH] Site/Step error ({message[:60]}...) - "
-                            f"retrying with different site... ({attempt}/{MAX_RETRIES})"
+                            f"[NO-RETRY] error, card marked for final collect ({attempt}/{MAX_RETRIES})"
                         )
                         await asyncio.sleep(_retry_delay(attempt))
                         continue
@@ -2036,6 +2097,51 @@ async def run_mass_checker(bot: Bot, session_id, cards, user_obj, plan_name):
 
         if errors > 0:
             logging.error(f"[MSH] {errors} tasks failed with exceptions")
+
+    # ── Auto re-check: every error card gets ONE fresh attempt after the main pass ──
+    session = MSH_SESSIONS.get(session_id)
+    if session and session['status'] != "STOPPED":
+        error_cards = list(session.get('error_cards', []))
+        if error_cards:
+            # Roll back the counters so re-checked cards are counted fresh
+            session['error_cards'] = []
+            session['errors'] = max(0, session['errors'] - len(error_cards))
+            session['checked'] = max(0, session['checked'] - len(error_cards))
+
+            print(f"🔄 [MSH] Main pass done - re-checking {len(error_cards)} error cards...")
+            logging.info(f"🔄 [MSH] Re-checking {len(error_cards)} error cards after main pass")
+
+            await update_progress_message(bot, session_id)
+
+            retry_tasks = []
+            for card_data in error_cards:
+                if is_session_stopped(session_id):
+                    break
+                cc_formatted = card_data.get('card', '')
+                if not cc_formatted or '|' not in cc_formatted:
+                    # Card string unusable - keep it counted as an error
+                    session['errors'] += 1
+                    session['checked'] += 1
+                    session['error_cards'].append(card_data)
+                    continue
+                cc_num = cc_formatted.split('|')[0]
+                task = asyncio.create_task(worker(cc_formatted, cc_num))
+                retry_tasks.append(task)
+                session['tasks'].append(task)
+
+            if retry_tasks:
+                await asyncio.gather(*retry_tasks, return_exceptions=True)
+
+            print(f"✅ [MSH] Error re-check done - remaining errors: {session['errors']}")
+            logging.info(f"✅ [MSH] Error re-check done - remaining errors: {session['errors']}")
+
+    # ── Collect the final error cards into ONE file and DM it to the user ──
+    session = MSH_SESSIONS.get(session_id)
+    if session and session.get('status') != "STOPPED":
+        try:
+            await send_error_cards_file_to_user(bot, session, user_obj, plan_name)
+        except Exception as e:
+            logging.error(f"[MSH] Failed to send error cards file: {e}")
 
     session = MSH_SESSIONS.get(session_id)
     if session and session['status'] != "STOPPED":
