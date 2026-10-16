@@ -34,11 +34,11 @@ from sub import get_premium_status
 # CONFIGURATION & URLS
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-CUSTOM_CHARGED_EMOJI_ID = "5343636681473935403"
+CUSTOM_CHARGED_EMOJI_ID = "5920049201294610186"
 CUSTOM_APPROVED_EMOJI_ID = "5039844895779455925"
 CUSTOM_DECLINED_EMOJI_ID = "4915853119839011973"
 
-BTN_CHARGED_EMOJI_ID = "5343636681473935403"
+BTN_CHARGED_EMOJI_ID = "5920049201294610186"
 BTN_DEAD_EMOJI_ID = "4915853119839011973"
 BTN_LIVE_EMOJI_ID = "5039844895779455925"
 BTN_STOP_EMOJI_ID = "5040042498634810056"
@@ -92,7 +92,7 @@ _start_msh_gc()
 router = Router()
 
 API_URLS = [
-    "https://api-wokring-production-c749.up.railway.app/shopify",
+    "https://web-production-0919d.up.railway.app/shopify",
     
       
 ]
