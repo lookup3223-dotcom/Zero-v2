@@ -1015,8 +1015,9 @@ async def send_charged_msg_to_user(bot: Bot, cc_formatted, response_msg, bin_dat
     ])
 
     # Always send to user's DM
+    dm_message = None
     try:
-        await safe_send_animation(bot, 
+        dm_message = await safe_send_animation(bot, 
             chat_id=user_obj.id,
             animation=gif_url,
             caption=caption,
@@ -1028,7 +1029,7 @@ async def send_charged_msg_to_user(bot: Bot, cc_formatted, response_msg, bin_dat
     except Exception as e:
         logging.error(f"Error sending charged DM with animation: {e}. Falling back to text.")
         try:
-            await safe_send_message(bot, 
+            dm_message = await safe_send_message(bot, 
                 chat_id=user_obj.id,
                 text=caption,
                 parse_mode="HTML",
@@ -1037,6 +1038,10 @@ async def send_charged_msg_to_user(bot: Bot, cc_formatted, response_msg, bin_dat
             )
         except Exception as inner_e:
             logging.error(f"Error sending charged text DM: {inner_e}")
+
+    # ── Pin the charged hit in the user's DM ──
+    if dm_message:
+        await _pin_charged_in_dm(bot, user_obj.id, dm_message.message_id)
 
     # Also send to extra charged group log
     for target_chat in [EXTRA_CHARGED_GROUP_ID]:
@@ -1061,6 +1066,26 @@ async def send_charged_msg_to_user(bot: Bot, cc_formatted, response_msg, bin_dat
                 )
             except Exception as inner_e:
                 logging.error(f"Error sending HIT text to extra group: {inner_e}")
+
+async def _pin_charged_in_dm(bot: Bot, chat_id, message_id):
+    """Pin a charged hit in the user's DM. Silent (no notification) and never fatal."""
+    try:
+        await bot.pin_chat_message(
+            chat_id=chat_id,
+            message_id=message_id,
+            disable_notification=True
+        )
+        logging.info(f"[MSH] Pinned CHARGED hit in DM for user {chat_id} (msg {message_id})")
+    except TelegramBadRequest as e:
+        err = str(e).lower()
+        if "not enough rights" in err or "chat_admin_required" in err or "not a member" in err:
+            logging.warning(f"[MSH] No pin rights in DM for user {chat_id}: {e}")
+        else:
+            logging.error(f"[MSH] Pin failed in DM for user {chat_id}: {e}")
+    except TelegramForbiddenError as e:
+        logging.warning(f"[MSH] Cannot pin in DM for user {chat_id}: {e}")
+    except Exception as e:
+        logging.error(f"[MSH] Unexpected pin error for user {chat_id}: {e}")
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # BUTTONS & PROGRESS MESSAGE
