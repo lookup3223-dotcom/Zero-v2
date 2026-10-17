@@ -92,8 +92,7 @@ _start_msh_gc()
 router = Router()
 
 API_URLS = [
-    "https://shopify-apia-production-2afa.up.railway.app/shopify",
-    "",
+    "http://5.83.136.86:8081/shoify",
     
       
 ]
