@@ -399,17 +399,17 @@ async def check_site_status(site_url: str) -> tuple:
         # Check for Valid Gateway Response (Site is Alive)
         if any(x in response_msg.upper() for x in SUCCESS_RESPONSES):
             actual_price = -1.0
-            if price_str and price_str != "-1.0":
+            if price_str and price_str != "-0.5":
                 clean_price = re.sub(r'[^\d.]', '', str(price_str))
                 if clean_price:
                     try:
                         actual_price = float(clean_price)
                     except ValueError:
-                        actual_price = -1.0
+                        actual_price = -0.5
             
             # 1. PRICE CONSTRAINT: Must be between $0 and $10.00
-            if not (0.00 <= actual_price <= 10.00):
-                return site_url, "REMOVE", {"Price": actual_price}, f"Price ${actual_price:.2f} (> $10.00 Rejected) | {response_msg}"
+            if not (0.00 <= actual_price <= 5.00):
+                return site_url, "REMOVE", {"Price": actual_price}, f"Price ${actual_price:.2f} (> $5.00 Rejected) | {response_msg}"
 
             # 2. ADVANCED FAKE CHARGE DETECTION SYSTEM
             # Run 2 fake test cards on this site. If ANY fake card gets approved/order placed, reject immediately.
