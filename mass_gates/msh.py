@@ -92,7 +92,7 @@ _start_msh_gc()
 router = Router()
 
 API_URLS = [
-    "https://afuonax-shopii-api-production.up.railway.app/shopify",
+    "https://p01--jope--7rj6gztjzxw7.code.run/",
     
       
 ]
