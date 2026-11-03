@@ -92,7 +92,7 @@ _start_msh_gc()
 router = Router()
 
 API_URLS = [
-    "http://5.83.136.102:8137/",
+    "https://afuna-api.onrender.com",
     
       
 ]
