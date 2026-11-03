@@ -92,7 +92,7 @@ _start_msh_gc()
 router = Router()
 
 API_URLS = [
-    "https://p01--jope--7rj6gztjzxw7.code.run/",
+    "http://5.83.136.102:8137/",
     
       
 ]
